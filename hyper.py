@@ -188,6 +188,7 @@ if __name__ == '__main__':
     # if torch.cuda.is_available:
     #     torch.cuda.manual_seed_all(seed)  
     d = Data(data_dir=data_dir, reverse=True)
+    print(d)
     experiment = Experiment(model_name, num_iterations=800, batch_size=128, learning_rate=0.001, 
                             decay_rate=0.99, ent_vec_dim=200, rel_vec_dim=200, 
                             # cuda=True, 

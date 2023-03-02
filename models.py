@@ -3,7 +3,9 @@ import torch
 from torch.nn import functional as F, Parameter
 from torch.nn.init import xavier_normal_, xavier_uniform_
 
-
+# Every class has these functions: __init__, init, forward.
+# Include class: ConvE, HypER, HypE, DistMult, ComplEx
+# In a CNN: feature map, kernel, padding, pooling, filter
 class ConvE(torch.nn.Module):
     def __init__(self, d, d1, d2, **kwargs):
         super(ConvE, self).__init__()
@@ -11,7 +13,7 @@ class ConvE(torch.nn.Module):
         self.out_channels = kwargs["out_channels"]
         self.filt_h = kwargs["filt_h"]
         self.filt_w = kwargs["filt_w"]
-
+# torch.nn.Embedding(): make the embedding
         self.E = torch.nn.Embedding(len(d.entities), d1, padding_idx=0)
         self.R = torch.nn.Embedding(len(d.relations), d2, padding_idx=0)
         self.inp_drop = torch.nn.Dropout(kwargs["input_dropout"])
@@ -21,11 +23,13 @@ class ConvE(torch.nn.Module):
 
         self.conv1 = torch.nn.Conv2d(self.in_channels, self.out_channels, 
                             (self.filt_h, self.filt_w), 1, 0, bias=True)
+        # torch.nn.BatchNorm2d(): a class in PyTorch that performs batch normalization on the input data of a 2D convolutional neural network.
         self.bn0 = torch.nn.BatchNorm2d(self.in_channels)
         self.bn1 = torch.nn.BatchNorm2d(self.out_channels)
         self.bn2 = torch.nn.BatchNorm1d(d1)
         self.register_parameter('b', Parameter(torch.zeros(len(d.entities))))
         fc_length = (20-self.filt_h+1)*(20-self.filt_w+1)*self.out_channels
+        # torch.nn.Linear(): a class for a fully connected (dense) layer with "fc_length" input features and "d1" output features.
         self.fc = torch.nn.Linear(fc_length, d1)
 
     def init(self):
@@ -73,12 +77,14 @@ class HypER(torch.nn.Module):
         self.bn1 = torch.nn.BatchNorm2d(self.out_channels)
         self.bn2 = torch.nn.BatchNorm1d(d1)
         self.register_parameter('b', Parameter(torch.zeros(len(d.entities))))
+# Diff
         fc_length = (1-self.filt_h+1)*(d1-self.filt_w+1)*self.out_channels
         self.fc = torch.nn.Linear(fc_length, d1)
+# More here        
         fc1_length = self.in_channels*self.out_channels*self.filt_h*self.filt_w
         self.fc1 = torch.nn.Linear(d2, fc1_length)
         
-
+# Same
     def init(self):
         xavier_normal_(self.E.weight.data)
         xavier_normal_(self.R.weight.data)
@@ -95,7 +101,7 @@ class HypER(torch.nn.Module):
         k = k.view(e1.size(0)*self.in_channels*self.out_channels, 1, self.filt_h, self.filt_w)
 
         x = x.permute(1, 0, 2, 3)
-
+        # conv2d(): used to create a convolutional layer for 2-dimensional data.
         x = F.conv2d(x, k, groups=e1.size(0))
         x = x.view(e1.size(0), 1, self.out_channels, 1-self.filt_h+1, e1.size(3)-self.filt_w+1)
         x = x.permute(0, 3, 4, 1, 2)
@@ -144,6 +150,7 @@ class HypE(torch.nn.Module):
 
 
     def forward(self, e1_idx, r_idx):
+        # .view(): reshape the tensor
         e1 = self.E(e1_idx).view(-1, 1, 10, 20)
         r = self.R(r_idx)
         x = self.bn0(e1)
@@ -153,7 +160,7 @@ class HypE(torch.nn.Module):
         k = k.view(e1.size(0)*self.in_channels*self.out_channels, 1, self.filt_h, self.filt_w)
 
         x = x.permute(1, 0, 2, 3)
-
+        # e1.size(0): take the 0 dimension of a tensor
         x = F.conv2d(x, k, groups=e1.size(0))
         x = x.view(e1.size(0), 1, self.out_channels, 10-self.filt_h+1, 20-self.filt_w+1)
         x = x.permute(0, 3, 4, 1, 2)
